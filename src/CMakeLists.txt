@@ -56,7 +56,9 @@ target_compile_definitions(MarDyn PUBLIC
         ${ADIOS2_COMPILE_DEFINITION}
 )
 
+if(NOT MAMICO_COUPLING)
 add_test(
         NAME MarDyn_test
         COMMAND MarDyn -t -d ${PROJECT_SOURCE_DIR}/test_input
 )
+endif()

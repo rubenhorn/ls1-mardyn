@@ -25,6 +25,7 @@ public:
 	     <outputprefix>STRING</outputprefix>
 	     <incremental>BOOL</incremental>
 	     <appendTimestamp>BOOL</appendTimestamp>
+		 <appendTimestep>BOOL</appendTimestep>
 	   </outputplugin>
 	   \endcode
 	 */
@@ -51,6 +52,7 @@ private:
 	std::string _outputPrefix;
 	unsigned long _writeFrequency {0ul};
 	bool _appendTimestamp {false};
+	bool _appendTimestep {false};
 	bool _incremental {false};
 };
 
