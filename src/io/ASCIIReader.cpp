@@ -294,7 +294,6 @@ void ASCIIReader::readPhaseSpaceHeaderTimeOnly() {
 
 	Log::global_log->info() << "Reading phase space header from file " << _phaseSpaceHeaderFile << std::endl;
 
-	std::vector<Component>& dcomponents = *(_simulation.getEnsemble()->getComponents());
 	bool done = false; // When the last currentTime element was read, "done" is set to true
 
 	while(!done) {
