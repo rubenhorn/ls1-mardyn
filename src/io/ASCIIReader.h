@@ -61,7 +61,7 @@ public:
 	/**
 	 * Only part of \ref readPhaseSpaceHeader() to only read the currentTime (simulation time)
 	 */
-	void readPhaseSpaceHeaderTimeOnlyOnly();
+	void readPhaseSpaceHeaderTimeOnly();
 
 	//! @brief reads in the data of all molecules
 	//!
