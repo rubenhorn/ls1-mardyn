@@ -47,6 +47,7 @@ void initOptions(optparse::OptionParser *op) {
 	op->add_option("--logfile").dest("logfile").type("string").metavar("PREFIX").set_default("MarDyn").help("enable output to logfile using given prefix for the filename (default: %default)");
 	op->add_option("--legacy-cell-processor").dest("legacy-cell-processor").type("bool").action("store_true").set_default(false).help("use legacyCellProcessor (AoS) (default: %default)");
 	op->add_option("--final-checkpoint").dest("final-checkpoint").type("int").metavar("(1|0)").set_default(1).help("enable/disable final checkopint (default: %default)");
+	op->add_option("--restart").dest("restart").type("int").metavar("(1|0)").set_default(0).help("enable/disable restart from final checkopint (default: %default)");
 	op->add_option("--timed-checkpoint").dest("timed-checkpoint").type("float").metavar("TIME").set_default(-1).help("Execution time of the simulation in seconds after which a checkpoint is forced, disable: -1. (default: %default)");
 #ifdef ENABLE_SIGHANDLER
 	op->add_option("-S", "--sigsegvhandler").dest("sigsegvhandler").type("bool") .action("store_true") .set_default(false) .help("sigsegvhandler: prints stacktrace on sigsegv (default: %default)");
@@ -213,6 +214,14 @@ int main(int argc, char** argv) {
 	}
 	/* First read the given config file if it exists, then overwrite parameters with command line arguments. */
 	std::string configFileName(args[0]);
+	size_t lastIndex = configFileName.rfind(".");
+	std::string outPrefix = configFileName.substr(0, lastIndex);
+	if( options.is_set_by_user("outputprefix") ) {
+		outPrefix = options["outputprefix"];
+	}
+	simulation.setOutputPrefix(outPrefix.c_str());
+	Log::global_log->info() << "Default output prefix: " << simulation.getOutputPrefix() << std::endl;
+
 	if( fileExists(configFileName.c_str()) ) {
 		Log::global_log->info() << "Config file: " << configFileName << std::endl;
 		simulation.readConfigFile(configFileName);
@@ -236,6 +245,14 @@ int main(int argc, char** argv) {
 		Log::global_log->info() << "Final checkpoint disabled." << std::endl;
 	}
 
+	if ( (int) options.get("restart") > 0 ) {
+		simulation.enableRestart();
+		Log::global_log->info() << "Restart from final checkpoint enabled" << std::endl;
+	} else {
+		simulation.disableRestart();
+		Log::global_log->info() << "Restart from final checkpoint disabled." << std::endl;
+	}
+
 	if( options.is_set_by_user("timed-checkpoint") ) {
 		double checkpointtime = options.get("timed-checkpoint");
 		simulation.setForcedCheckpointTime(checkpointtime);
@@ -254,14 +271,6 @@ int main(int argc, char** argv) {
 		Log::global_log->info() << "Enabling memory info output" << std::endl;
 		simulation.enableMemoryProfiler();
 	}
-	size_t lastIndex = configFileName.rfind(".");
-	std::string outPrefix = configFileName.substr(0, lastIndex);
-	if( options.is_set_by_user("outputprefix") ) {
-		outPrefix = options["outputprefix"];
-	}
-	simulation.setOutputPrefix(outPrefix.c_str());
-	Log::global_log->info() << "Default output prefix: " << simulation.getOutputPrefix() << std::endl;
-
 
 	simulation.prepare_start();
 

@@ -657,68 +657,90 @@ void Simulation::readXML(XMLfileUnits& xmlconfig) {
 
 	std::string oldpath = xmlconfig.getcurrentnodepath();
 
-	if(xmlconfig.changecurrentnode("ensemble/phasespacepoint/file")) {
-		Log::global_log->info() << "Reading phase space from file." << std::endl;
-		std::string pspfiletype;
-		xmlconfig.getNodeValue("@type", pspfiletype);
-		Log::global_log->info() << "Phase space file type: " << pspfiletype << std::endl;
 
-		if (pspfiletype == "ASCII") {
-			_inputReader = new ASCIIReader();
-			_inputReader->readXML(xmlconfig);
+	bool restarting = false;
+	if(_restart) {
+		/* Read final checkpoint */
+		std::string cpfile(_outputPrefix + ".restart.dat");
+		if (std::ifstream(cpfile).good()) {
+			restarting = true;
+			Log::global_log->info() << "Reading final checkpoint from file '" << cpfile << "'" << std::endl;
+			// Final checkpoint by Simulation class is always ASCII
+			ASCIIReader* inputReader = new ASCIIReader();
+			inputReader->setPhaseSpaceFile(cpfile);
+			inputReader->setPhaseSpaceHeaderFile(cpfile);
+			inputReader->readPhaseSpaceHeaderTimeOnly();
+			_inputReader = inputReader;
 		}
-		else if (pspfiletype == "binary") {
-			_inputReader = new BinaryReader();
-			_inputReader->readXML(xmlconfig);
-			//!@todo read header should be either part of readPhaseSpace or readXML.
-			double timestepLength = 0.005;  // <-- TODO: should be removed from parameter list
-			_inputReader->readPhaseSpaceHeader(_domain, timestepLength);
+		else {
+			Log::global_log->warning() << "Can't read final checkpoint from file '" << cpfile << "'" << std::endl;
+			Log::global_log->info() << "(Starting simulation from scratch.)" << std::endl;
 		}
+	}
+	if(!restarting) {
+		if(xmlconfig.changecurrentnode("ensemble/phasespacepoint/file")) {
+			Log::global_log->info() << "Reading phase space from file." << std::endl;
+			std::string pspfiletype;
+			xmlconfig.getNodeValue("@type", pspfiletype);
+			Log::global_log->info() << "Phase space file type: " << pspfiletype << std::endl;
+
+			if (pspfiletype == "ASCII") {
+				_inputReader = new ASCIIReader();
+				_inputReader->readXML(xmlconfig);
+			}
+			else if (pspfiletype == "binary") {
+				_inputReader = new BinaryReader();
+				_inputReader->readXML(xmlconfig);
+				//!@todo read header should be either part of readPhaseSpace or readXML.
+				double timestepLength = 0.005;  // <-- TODO: should be removed from parameter list
+				_inputReader->readPhaseSpaceHeader(_domain, timestepLength);
+			}
 #ifdef ENABLE_ADIOS2
-        else if (pspfiletype == "adios2") {
-			_inputReader = new Adios2Reader();
+			else if (pspfiletype == "adios2") {
+				_inputReader = new Adios2Reader();
+				_inputReader->readXML(xmlconfig);
+			}
+#endif
+			else {
+				std::ostringstream error_message;
+				error_message << "Unknown phase space file type" << std::endl;
+				MARDYN_EXIT(error_message.str());
+			}
+		}
+		xmlconfig.changecurrentnode(oldpath);
+
+		oldpath = xmlconfig.getcurrentnodepath();
+		if(xmlconfig.changecurrentnode("ensemble/phasespacepoint/generator")) {
+			std::string generatorName;
+			xmlconfig.getNodeValue("@name", generatorName);
+			Log::global_log->info() << "Initializing phase space using generator: " << generatorName << std::endl;
+			if(generatorName == "MultiObjectGenerator") {
+				_inputReader = new MultiObjectGenerator();
+			}
+			else if(generatorName == "mkesfera") {
+				_inputReader = new MkesferaGenerator();
+			}
+			else if(generatorName == "mkTcTS") {
+				_inputReader = new MkTcTSGenerator();
+			}
+			else if (generatorName == "CubicGridGenerator") {
+				_inputReader = new CubicGridGeneratorInternal();
+			}
+			else if (generatorName == "ReplicaGenerator") {
+				_inputReader = new ReplicaGenerator();
+			}
+			else if (generatorName == "PerCellGenerator") {
+				_inputReader = new PerCellGenerator();
+			}
+			else {
+				std::ostringstream error_message;
+				error_message << "Unknown generator: " << generatorName << std::endl;
+				MARDYN_EXIT(error_message.str());
+			}
 			_inputReader->readXML(xmlconfig);
 		}
-#endif
-		else {
-			std::ostringstream error_message;
-			error_message << "Unknown phase space file type" << std::endl;
-			MARDYN_EXIT(error_message.str());
-		}
+		xmlconfig.changecurrentnode(oldpath);
 	}
-	xmlconfig.changecurrentnode(oldpath);
-
-	oldpath = xmlconfig.getcurrentnodepath();
-	if(xmlconfig.changecurrentnode("ensemble/phasespacepoint/generator")) {
-		std::string generatorName;
-		xmlconfig.getNodeValue("@name", generatorName);
-		Log::global_log->info() << "Initializing phase space using generator: " << generatorName << std::endl;
-		if(generatorName == "MultiObjectGenerator") {
-			_inputReader = new MultiObjectGenerator();
-		}
-		else if(generatorName == "mkesfera") {
-			_inputReader = new MkesferaGenerator();
-		}
-		else if(generatorName == "mkTcTS") {
-			_inputReader = new MkTcTSGenerator();
-		}
-		else if (generatorName == "CubicGridGenerator") {
-			_inputReader = new CubicGridGeneratorInternal();
-		}
-		else if (generatorName == "ReplicaGenerator") {
-			_inputReader = new ReplicaGenerator();
-		}
-		else if (generatorName == "PerCellGenerator") {
-			_inputReader = new PerCellGenerator();
-		}
-		else {
-			std::ostringstream error_message;
-			error_message << "Unknown generator: " << generatorName << std::endl;
-			MARDYN_EXIT(error_message.str());
-		}
-		_inputReader->readXML(xmlconfig);
-	}
-	xmlconfig.changecurrentnode(oldpath);
 
 	oldpath = xmlconfig.getcurrentnodepath();
 

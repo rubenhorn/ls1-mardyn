@@ -420,6 +420,9 @@ public:
 	void enableFinalCheckpoint() { _finalCheckpoint = true; }
 	void disableFinalCheckpoint() { _finalCheckpoint = false; }
 
+	void enableRestart() { _restart = true; }
+	void disableRestart() { _restart = true; }
+
 	void useLegacyCellProcessor() { _legacyCellProcessor = true; }
 
 	void enableMemoryProfiler() {
@@ -472,6 +475,9 @@ private:
 
 	/** Enable final checkpoint after simulation run. */
 	bool _finalCheckpoint;
+
+	/** Enable restart from final checkpoint */
+	bool _restart;
 
 	/** use legacyCellProcessor instead of vectorizedCellProcessor */
 	bool _legacyCellProcessor = false;
