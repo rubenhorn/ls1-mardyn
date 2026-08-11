@@ -421,7 +421,7 @@ public:
 	void disableFinalCheckpoint() { _finalCheckpoint = false; }
 
 	void enableRestart() { _restart = true; }
-	void disableRestart() { _restart = true; }
+	void disableRestart() { _restart = false; }
 
 	void useLegacyCellProcessor() { _legacyCellProcessor = true; }
 

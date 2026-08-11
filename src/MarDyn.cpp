@@ -222,6 +222,14 @@ int main(int argc, char** argv) {
 	simulation.setOutputPrefix(outPrefix.c_str());
 	Log::global_log->info() << "Default output prefix: " << simulation.getOutputPrefix() << std::endl;
 
+	if ( (int) options.get("restart") > 0 ) {
+		simulation.enableRestart();
+		Log::global_log->info() << "Restart from final checkpoint enabled" << std::endl;
+	} else {
+		simulation.disableRestart();
+		Log::global_log->info() << "Restart from final checkpoint disabled." << std::endl;
+	}
+
 	if( fileExists(configFileName.c_str()) ) {
 		Log::global_log->info() << "Config file: " << configFileName << std::endl;
 		simulation.readConfigFile(configFileName);
@@ -243,14 +251,6 @@ int main(int argc, char** argv) {
 	} else {
 		simulation.disableFinalCheckpoint();
 		Log::global_log->info() << "Final checkpoint disabled." << std::endl;
-	}
-
-	if ( (int) options.get("restart") > 0 ) {
-		simulation.enableRestart();
-		Log::global_log->info() << "Restart from final checkpoint enabled" << std::endl;
-	} else {
-		simulation.disableRestart();
-		Log::global_log->info() << "Restart from final checkpoint disabled." << std::endl;
 	}
 
 	if( options.is_set_by_user("timed-checkpoint") ) {
