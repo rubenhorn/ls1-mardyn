@@ -292,7 +292,7 @@ void ASCIIReader::readPhaseSpaceHeaderTimeOnly() {
 		MARDYN_EXIT(error_message.str());
 	}
 
-	Log::global_log->info() << "Reading phase space header from file " << _phaseSpaceHeaderFile << std::endl;
+	Log::global_log->info() << "Reading simulation time from phase space header, from file " << _phaseSpaceHeaderFile << std::endl;
 
 	bool done = false; // When the last currentTime element was read, "done" is set to true
 
