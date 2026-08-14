@@ -47,7 +47,7 @@ void initOptions(optparse::OptionParser *op) {
 	op->add_option("--logfile").dest("logfile").type("string").metavar("PREFIX").set_default("MarDyn").help("enable output to logfile using given prefix for the filename (default: %default)");
 	op->add_option("--legacy-cell-processor").dest("legacy-cell-processor").type("bool").action("store_true").set_default(false).help("use legacyCellProcessor (AoS) (default: %default)");
 	op->add_option("--final-checkpoint").dest("final-checkpoint").type("int").metavar("(1|0)").set_default(1).help("enable/disable final checkopint (default: %default)");
-	op->add_option("--restart").dest("restart").type("int").metavar("(1|0)").set_default(0).help("enable/disable restart from final checkopint (default: %default)");
+	op->add_option("--restart").dest("restart").type("int").metavar("(1|0)").set_default(0).help("enable/disable restart from final checkpoint (default: %default)");
 	op->add_option("--timed-checkpoint").dest("timed-checkpoint").type("float").metavar("TIME").set_default(-1).help("Execution time of the simulation in seconds after which a checkpoint is forced, disable: -1. (default: %default)");
 #ifdef ENABLE_SIGHANDLER
 	op->add_option("-S", "--sigsegvhandler").dest("sigsegvhandler").type("bool") .action("store_true") .set_default(false) .help("sigsegvhandler: prints stacktrace on sigsegv (default: %default)");
