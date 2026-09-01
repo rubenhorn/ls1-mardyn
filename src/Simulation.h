@@ -77,8 +77,10 @@ private:
 	void updateForces();
 
 public:
-	/** Instantiate simulation object */
-	Simulation();
+	/** @brief Instantiate simulation object
+	 *  @param[in]  handleSignals if true, use custom signal handler for: SIGINT, SIGTERM, SIGUSR1, (and SIGSEGV for debug builds)
+	*/
+	Simulation(bool handleSignals = true);
 
 	/** destruct simulation object */
 	~Simulation();
@@ -87,7 +89,7 @@ public:
 	 *
 	 * The following xml object structure is handled by this method:
 	 * \code{.xml}
-	   <simulation handle_signals="BOOL">
+	   <simulation>
 	     <integrator type="STRING"><!-- see Integrator class documentation --></integrator>
 	     <run>
 	       <production>
@@ -576,16 +578,17 @@ public:
 		SIG_USR1 = 1 << 1, // SIGUSR1
 	};
 private:
-	// Use <simulation handle_signals="false"> to overwrite this behaviour
-	bool _handleSignals = true;
+	// Custom handling of SIGINT, SIGTERM, SIGUSR1, (and SIGSEGV for debug builds)
+	bool _handleSignals;
 	// Store old signal handlers and restore them later
 	struct sigaction _oldSigInt;
 	struct sigaction _oldSigTerm;
 	struct sigaction _oldSigUsr1;
+	struct sigaction _oldSigSegv;
 	void installSignalHandlers();
 	void restoreOldSignalHandlers();
 	// Copy received signals as a bitmask to local variable
-	void receiveSignals();
+	inline void receiveSignals();
 	int _signalFlags;
 	// stores the timing info for the previous load. This is used for the load calculation and the rebalancing.
 	double previousTimeForLoad = 0.;

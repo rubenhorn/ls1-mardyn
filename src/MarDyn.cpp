@@ -21,7 +21,6 @@
 #include "utils/OptionParser.h"
 #include "utils/Testing.h"
 #include "utils/Timer.h"
-#include "utils/SigsegvHandler.h"
 #ifdef MARDYN_AUTOPAS
 #include "autopas/Version.h"
 #endif
@@ -49,9 +48,13 @@ void initOptions(optparse::OptionParser *op) {
 	op->add_option("--final-checkpoint").dest("final-checkpoint").type("int").metavar("(1|0)").set_default(1).help("enable/disable final checkopint (default: %default)");
 	op->add_option("--restart").dest("restart").type("int").metavar("(1|0)").set_default(0).help("enable/disable restart from final checkpoint (default: %default)");
 	op->add_option("--timed-checkpoint").dest("timed-checkpoint").type("float").metavar("TIME").set_default(-1).help("Execution time of the simulation in seconds after which a checkpoint is forced, disable: -1. (default: %default)");
-#ifdef ENABLE_SIGHANDLER
-	op->add_option("-S", "--sigsegvhandler").dest("sigsegvhandler").type("bool") .action("store_true") .set_default(false) .help("sigsegvhandler: prints stacktrace on sigsegv (default: %default)");
+	std::ostringstream ossHelpHandleSignals;
+	ossHelpHandleSignals << "Handle signals: SIGINT, SIGTERM, SIGUSR1";
+#ifndef NDEBUG
+	ossHelpHandleSignals << ", SIGSEGV";
 #endif
+	ossHelpHandleSignals << " (default: %default)";
+	op->add_option("-s", "--handle-signals").dest("handle-signals").type("bool").action("store_true").set_default(false).help(ossHelpHandleSignals.str());
 
 	op->add_option("-t", "--tests").action("store_true").dest("tests").type("bool").set_default(false).help("unit tests: run built-in unit tests instead of regular simulation");
 	op->add_option("-d", "--test-dir").dest("testDataDirectory").type("string").metavar("STR").set_default("").help("unit tests: specify the directory where the in input data required by the tests resides");
@@ -182,12 +185,11 @@ int main(int argc, char** argv) {
 		Log::global_log->info() << "Enabling verbose log output." << std::endl;
 		Log::global_log->set_log_level(Log::All);
 	}
-#ifdef ENABLE_SIGHANDLER
-	if (options.is_set_by_user("sigsegvhandler")) {
-		Log::global_log->info() << "Enabling sigsegvhandler." << std::endl;
-		registerSigsegvHandler();  // from SigsegvHandler.h
+	bool handleSignals = false;
+	if (options.is_set_by_user("handle-signals")) {
+		Log::global_log->info() << "Enabling signal handling." << std::endl;
+		handleSignals = true;
 	}
-#endif
 	log_program_build_info();
 	log_program_execution_info(argc, argv);
 
@@ -203,7 +205,7 @@ int main(int argc, char** argv) {
 
 
 	/* Set up and run regular Simulation */
-	Simulation simulation;
+	Simulation simulation(handleSignals);
 
 	auto numArgs = args.size();
 	if(numArgs != 1) {

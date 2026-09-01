@@ -16,6 +16,10 @@
 #include <string>
 #include <vector>
 
+#ifndef _WIN32 // POSIX
+#include <execinfo.h>
+#endif
+
 #include "Common.h"
 #include "Domain.h"
 #include "particleContainer/LinkedCells.h"
@@ -92,7 +96,7 @@
 
 Simulation* global_simulation;
 
-Simulation::Simulation()
+Simulation::Simulation(bool handleSignals)
 	:
 	_simulationTime(0.0),
 	_maxMoleculeId(0),
@@ -127,7 +131,8 @@ Simulation::Simulation()
 #endif /* TASKTIMINGPROFILE */
 	_forced_checkpoint_time(0),
 	_loopCompTime(0.0),
-	_loopCompTimeSteps(0)
+	_loopCompTimeSteps(0),
+	_handleSignals(handleSignals)
 {
 	_timeFromStart.start();
 	_ensemble = new CanonicalEnsemble();
@@ -163,8 +168,6 @@ Simulation::~Simulation() {
 }
 
 void Simulation::readXML(XMLfileUnits& xmlconfig) {
-	xmlconfig.getNodeValue("@handle_signals", _handleSignals);
-
 	/* timers */
 	if(xmlconfig.changecurrentnode("programtimers")) {
 		_timerProfiler.readXML(xmlconfig);
@@ -870,6 +873,23 @@ void Simulation::updateForces() {
 	} // end pragma omp parallel
 }
 
+std::string getStackTrace() {
+	std::ostringstream ss;
+#ifndef _WIN32 // POSIX
+	size_t size = 10;
+	void *array[size];
+	size = backtrace(array, size);
+	char** symbols = backtrace_symbols(array, size);
+    if (symbols != nullptr) {
+		ss << "Stack trace:\n";
+		for (int i = 0; i < size; ++i)
+			ss << "  " << symbols[i] << '\n';
+		free(symbols);
+	}
+#endif
+    return ss.str();
+}
+
 // Store of signals received on any rank
 std::atomic<int> signalFlags = Simulation::SIG_NONE;
 
@@ -888,6 +908,7 @@ void signalHandler(int signalReceived)
 #endif
 		<< "Received signal: " << signalReceived << std::endl;
     int signalFlagsBit = 0;
+	std::ostringstream ossError;
     switch (signalReceived) {
         case SIGINT:
         case SIGTERM:
@@ -896,8 +917,12 @@ void signalHandler(int signalReceived)
         case SIGUSR1:
             signalFlagsBit = Simulation::SIG_USR1;
             break;
+#ifndef NDEBUG
+		case SIGSEGV:
+			ossError << "Segmentation fault (" << signalReceived << ")!\n" << getStackTrace();
+			MARDYN_EXIT(ossError.str());
+#endif
         default:
-			std::ostringstream ossError;
 			ossError << "Handler caught wrong signal: " << signalReceived;
             MARDYN_EXIT(ossError.str());
     }
@@ -914,6 +939,9 @@ void Simulation::installSignalHandlers() {
     sigaction(SIGINT,  &sa, &_oldSigInt);
     sigaction(SIGTERM, &sa, &_oldSigTerm);
     sigaction(SIGUSR1, &sa, &_oldSigUsr1);
+#ifndef NDEBUG
+    sigaction(SIGSEGV, &sa, &_oldSigSegv);
+#endif
 }
 
 void Simulation::restoreOldSignalHandlers()
@@ -922,6 +950,9 @@ void Simulation::restoreOldSignalHandlers()
     sigaction(SIGINT,  &_oldSigInt, nullptr);
     sigaction(SIGTERM, &_oldSigTerm, nullptr);
     sigaction(SIGUSR1, &_oldSigUsr1, nullptr);
+#ifndef NDEBUG
+    sigaction(SIGSEGV, &_oldSigSegv, nullptr);
+#endif
 }
 
 void Simulation::prepare_start() {
@@ -1080,11 +1111,13 @@ void Simulation::prepare_start() {
 
 }
 
-void Simulation::receiveSignals() {
-	_signalFlags = signalFlags.exchange(SIG_NONE, std::memory_order_relaxed);
-	#ifdef ENABLE_MPI
-		MPI_Allreduce(MPI_IN_PLACE, &_signalFlags, 1, MPI_INT, MPI_BOR, MPI_COMM_WORLD);
-	#endif
+inline void Simulation::receiveSignals() {
+	if(_handleSignals) {
+		_signalFlags = signalFlags.exchange(SIG_NONE, std::memory_order_relaxed);
+		#ifdef ENABLE_MPI
+			MPI_Allreduce(MPI_IN_PLACE, &_signalFlags, 1, MPI_INT, MPI_BOR, MPI_COMM_WORLD);
+		#endif
+	}
 }
 
 void Simulation::simulate() {
