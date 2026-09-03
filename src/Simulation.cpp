@@ -1656,7 +1656,7 @@ void Simulation::initialize() {
 
 bool Simulation::keepRunning() {
 
-	// Simstep Criter
+	// Simstep Criteria
 	if (_signalFlags & SIG_STOP) {
 		Log::global_log->info() << "Stopped by SIGINT or SIGTERM." << std::endl;
 		simulationDone = true;
