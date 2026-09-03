@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-#ifndef _WIN32 // POSIX
+#ifdef __GLIBC__
 #include <execinfo.h>
 #endif
 
@@ -678,7 +678,7 @@ void Simulation::readXML(XMLfileUnits& xmlconfig) {
 		}
 		else {
 			Log::global_log->warning() << "Can't read final checkpoint from file '" << cpfile << "'" << std::endl;
-			Log::global_log->info() << "(Starting simulation from scratch.)" << std::endl;
+			Log::global_log->warning() << "(Starting simulation from scratch.)" << std::endl;
 		}
 	}
 	if(!restarting) {
@@ -876,7 +876,7 @@ void Simulation::updateForces() {
 
 std::string getStackTrace() {
 	std::ostringstream ss;
-#ifndef _WIN32 // POSIX
+#ifdef __GLIBC__
 	size_t size = 10;
 	void *array[size];
 	size = backtrace(array, size);
@@ -931,33 +931,37 @@ void signalHandler(int signalReceived)
 }
 
 void Simulation::installSignalHandlers() {
-	Log::global_log->info() << "Installing signal handlers" << std::endl;
-    struct sigaction sa{};
-    sa.sa_handler = signalHandler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
+	if(_handleSignals) {
+		Log::global_log->info() << "Installing signal handlers" << std::endl;
+		struct sigaction sa{};
+		sa.sa_handler = signalHandler;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
 
-    sigaction(SIGINT,  &sa, &_oldSigInt);
-    sigaction(SIGTERM, &sa, &_oldSigTerm);
-    sigaction(SIGUSR1, &sa, &_oldSigUsr1);
+		sigaction(SIGINT,  &sa, &_oldSigInt);
+		sigaction(SIGTERM, &sa, &_oldSigTerm);
+		sigaction(SIGUSR1, &sa, &_oldSigUsr1);
 #ifndef NDEBUG
-    sigaction(SIGSEGV, &sa, &_oldSigSegv);
+		sigaction(SIGSEGV, &sa, &_oldSigSegv);
 #endif
+	}
 }
 
 void Simulation::restoreOldSignalHandlers()
 {
-	Log::global_log->info() << "Restoring old signal handlers" << std::endl;
-    sigaction(SIGINT,  &_oldSigInt, nullptr);
-    sigaction(SIGTERM, &_oldSigTerm, nullptr);
-    sigaction(SIGUSR1, &_oldSigUsr1, nullptr);
+	if(_handleSignals) {
+		Log::global_log->info() << "Restoring old signal handlers" << std::endl;
+		sigaction(SIGINT,  &_oldSigInt, nullptr);
+		sigaction(SIGTERM, &_oldSigTerm, nullptr);
+		sigaction(SIGUSR1, &_oldSigUsr1, nullptr);
 #ifndef NDEBUG
-    sigaction(SIGSEGV, &_oldSigSegv, nullptr);
+		sigaction(SIGSEGV, &_oldSigSegv, nullptr);
 #endif
+	}
 }
 
 void Simulation::prepare_start() {
-	if (_handleSignals) installSignalHandlers();
+	installSignalHandlers();
 
 	Log::global_log->info() << "Initializing simulation" << std::endl;
 
@@ -1517,7 +1521,7 @@ void Simulation::pluginEndStepCall(unsigned long simstep) {
 }
 
 void Simulation::finalize() {
-	if (_handleSignals) restoreOldSignalHandlers();
+	restoreOldSignalHandlers();
 
 	if (_FMM != nullptr) {
 		_FMM->printTimers();
