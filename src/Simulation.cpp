@@ -132,6 +132,7 @@ Simulation::Simulation(bool handleSignals)
 	_forced_checkpoint_time(0),
 	_loopCompTime(0.0),
 	_loopCompTimeSteps(0),
+	_signalFlags(SIG_NONE),
 	_handleSignals(handleSignals)
 {
 	_timeFromStart.start();
